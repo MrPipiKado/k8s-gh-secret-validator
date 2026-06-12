@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.git/
+token_validator/tests/
+conftest.py
+config.yaml
+examples/
+deploy/
+chart/
+*.md

@@ -1,0 +1,21 @@
+{{ include "token-validator.fullname" . }} has been installed.
+
+CronJob schedule: {{ .Values.schedule }}
+Teams alerts:     {{ if eq (include "token-validator.teamsEnabled" .) "true" }}ENABLED{{ else }}disabled{{ end }}
+
+Trigger a manual run to verify:
+
+  kubectl create job --from=cronjob/{{ include "token-validator.fullname" . }} \
+    {{ include "token-validator.fullname" . }}-manual -n {{ .Release.Namespace }}
+  kubectl logs -l app.kubernetes.io/instance={{ .Release.Name }} -n {{ .Release.Namespace }} --tail=-1
+
+{{- if eq .Values.rbac.scope "namespace" }}
+
+NOTE: rbac.scope is "namespace" — the ServiceAccount can only read secrets in
+{{ .Release.Namespace }}. Any config.secrets in other namespaces will report ERROR.
+{{- end }}
+{{- if and (eq (include "token-validator.teamsEnabled" .) "true") (not .Values.teamsWebhook.webhookUrl) (not .Values.teamsWebhook.existingSecret) }}
+
+WARNING: config.notifiers.teams.enabled is true but no teamsWebhook.webhookUrl /
+existingSecret was provided. Alerts will be skipped at runtime.
+{{- end }}

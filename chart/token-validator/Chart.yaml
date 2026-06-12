@@ -1,0 +1,14 @@
+apiVersion: v2
+name: token-validator
+description: Validate GitHub tokens stored in Kubernetes secrets and report their expiration.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - github
+  - tokens
+  - secrets
+  - expiration
+home: https://github.com/your-org/token-validator
+maintainers:
+  - name: platform-team

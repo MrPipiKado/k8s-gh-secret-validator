@@ -1,0 +1,39 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: token-validator
+  namespace: default
+spec:
+  schedule: "0 8 * * *"          # daily at 08:00
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        spec:
+          serviceAccountName: token-validator
+          restartPolicy: Never
+          containers:
+            - name: token-validator
+              # Replace with your built/pushed image.
+              image: token-validator:latest
+              imagePullPolicy: IfNotPresent
+              args: ["--config", "/etc/tv/config.yaml", "--fail-on-expiring"]
+              # Teams is disabled by default. To enable alerts, set
+              # notifiers.teams.enabled: true in the ConfigMap and uncomment:
+              # env:
+              #   - name: TEAMS_WEBHOOK_URL
+              #     valueFrom:
+              #       secretKeyRef:
+              #         name: token-validator-teams
+              #         key: webhook_url
+              volumeMounts:
+                - name: config
+                  mountPath: /etc/tv
+                  readOnly: true
+          volumes:
+            - name: config
+              configMap:
+                name: token-validator-config

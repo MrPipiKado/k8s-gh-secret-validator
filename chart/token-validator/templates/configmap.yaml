@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "token-validator.fullname" . }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "token-validator.labels" . | nindent 4 }}
+data:
+  # Rendered verbatim from .Values.config so any app config field is settable
+  # through values without changing this template.
+  config.yaml: |
+    {{- toYaml .Values.config | nindent 4 }}

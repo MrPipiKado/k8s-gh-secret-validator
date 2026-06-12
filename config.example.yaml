@@ -1,0 +1,21 @@
+# Warning window: tokens expiring within this many days are flagged WARN.
+warn_days: 7
+
+# Override only for GitHub Enterprise Server (default works for github.com).
+github_api_url: https://api.github.com
+
+# Secrets to inspect. Each entry names a secret and the keys within it that
+# hold GitHub tokens. A ".dockerconfigjson" key is parsed as a registry
+# credentials document and may yield one token per registry.
+secrets:
+  - namespace: default
+    name: github-creds
+    keys: [token, ci-token]
+  - namespace: default
+    name: ghcr-pull
+    keys: [".dockerconfigjson"]
+
+notifiers:
+  teams:
+    enabled: false              # off by default; set true to send alerts
+    webhook_url: ""             # or inject via the TEAMS_WEBHOOK_URL env var

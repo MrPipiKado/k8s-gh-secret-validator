@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: token-validator-config
+  namespace: default
+data:
+  config.yaml: |
+    warn_days: 7
+    github_api_url: https://api.github.com
+    secrets:
+      - namespace: default
+        name: github-creds
+        keys: [token]
+      - namespace: default
+        name: ghcr-pull
+        keys: [".dockerconfigjson"]
+    notifiers:
+      teams:
+        enabled: false
+        webhook_url: ""

@@ -1,0 +1,24 @@
+# Cross-namespace read of secrets, since the config may target several
+# namespaces. Tighten to a namespaced Role/RoleBinding (and drop the
+# ClusterRole) if all target secrets live in a single namespace.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: token-validator-secret-reader
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: token-validator-secret-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: token-validator-secret-reader
+subjects:
+  - kind: ServiceAccount
+    name: token-validator
+    namespace: default
