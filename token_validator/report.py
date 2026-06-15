@@ -38,7 +38,7 @@ def _fmt_days(r: TokenResult) -> str:
 class ConsoleReporter(Reporter):
     """Print an aligned table plus a summary line."""
 
-    COLUMNS = ("NAMESPACE", "SECRET", "KEY", "SOURCE", "TYPE", "STATUS",
+    COLUMNS = ("PROVIDER", "LOCATION", "SECRET", "KEY", "SOURCE", "TYPE", "STATUS",
                "EXPIRES", "DAYS", "MESSAGE")
 
     def report(self, results: List[TokenResult]) -> None:
@@ -47,8 +47,8 @@ class ConsoleReporter(Reporter):
             return
 
         rows = [
-            (r.namespace, r.name, r.key, r.source, r.token_type, r.status.value,
-             _fmt_expires(r), _fmt_days(r), r.message)
+            (r.provider, r.location, r.name, r.key, r.source, r.token_type,
+             r.status.value, _fmt_expires(r), _fmt_days(r), r.message)
             for r in results
         ]
         widths = [
@@ -114,7 +114,7 @@ class TeamsReporter(Reporter):
             expires = _fmt_expires(r)
             detail = f"{r.status.value} (expires {expires})" if r.expires_at else r.status.value
             facts.append({
-                "name": f"{r.namespace}/{r.name}[{r.key}] @ {r.source}",
+                "name": f"{r.provider}:{r.location}/{r.name}[{r.key}] @ {r.source}",
                 "value": detail,
             })
 

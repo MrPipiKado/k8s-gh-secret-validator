@@ -16,7 +16,7 @@ from token_validator.validator import validate
 
 def parse_args(argv=None) -> argparse.Namespace:
     p = argparse.ArgumentParser(
-        description="Validate GitHub tokens in Kubernetes secrets and report expiry.",
+        description="Validate GitHub tokens in Kubernetes and AWS secrets and report expiry.",
     )
     p.add_argument("--config", required=True, help="path to the YAML config file")
     p.add_argument("--warn-days", type=int, default=None,

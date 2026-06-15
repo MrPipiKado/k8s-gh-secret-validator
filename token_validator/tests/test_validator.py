@@ -147,3 +147,85 @@ def test_dockerconfig_yields_per_registry_results():
     by_source = {r.source: r.status for r in res}
     assert by_source["ghcr.io"] is Status.OK
     assert by_source["docker.io"] is Status.SKIPPED
+
+
+# --- AWS Secrets Manager ----------------------------------------------------
+
+import json  # noqa: E402
+
+from token_validator.models import AwsSecretRef  # noqa: E402
+
+
+class FakeAwsClient:
+    """Stand-in for a Secrets Manager client keyed by secret id -> SecretString."""
+
+    def __init__(self, mapping):
+        self._m = mapping
+
+    def get_secret_value(self, SecretId):  # noqa: N803 (boto3 arg name)
+        from botocore.exceptions import ClientError
+        if SecretId not in self._m:
+            raise ClientError(
+                {"Error": {"Code": "ResourceNotFoundException"}}, "GetSecretValue")
+        return {"SecretString": self._m[SecretId]}
+
+
+def run_aws(secrets_in_aws, refs, checker, warn_days=7):
+    client = FakeAwsClient(secrets_in_aws)
+    cfg = Config(aws_secrets=refs, warn_days=warn_days,
+                 github_api_url="https://api.github.com")
+    return validate(cfg, checker=checker, now=NOW,
+                    aws_client_factory=lambda region: client)
+
+
+def test_aws_plain_string_secret():
+    aws_secrets = {"prod/gh": "ghp_aws"}
+    refs = [AwsSecretRef("us-east-1", "prod/gh", [])]
+    checker = lambda t, u: TokenCheck(valid=True, expires_at=NOW + timedelta(days=30))
+    res = run_aws(aws_secrets, refs, checker)
+    assert len(res) == 1
+    assert res[0].provider == "aws"
+    assert res[0].location == "us-east-1"
+    assert res[0].status is Status.OK
+
+
+def test_aws_json_keys():
+    aws_secrets = {"prod/gh": json.dumps({"GITHUB_TOKEN": "ghp_json", "other": "x"})}
+    refs = [AwsSecretRef("eu-west-1", "prod/gh", ["GITHUB_TOKEN"])]
+    checker = lambda t, u: TokenCheck(valid=True, expires_at=NOW + timedelta(days=2))
+    res = run_aws(aws_secrets, refs, checker)
+    assert res[0].status is Status.WARN
+    assert res[0].key == "GITHUB_TOKEN"
+
+
+def test_aws_missing_secret_is_error():
+    refs = [AwsSecretRef("us-east-1", "absent", ["token"])]
+    checker = lambda t, u: TokenCheck(valid=True)
+    res = run_aws({}, refs, checker)
+    assert res[0].status is Status.ERROR
+    assert "ResourceNotFoundException" in res[0].message
+
+
+def test_aws_missing_key_is_error():
+    aws_secrets = {"prod/gh": json.dumps({"other": "ghp_x"})}
+    refs = [AwsSecretRef("us-east-1", "prod/gh", ["token"])]
+    checker = lambda t, u: TokenCheck(valid=True)
+    res = run_aws(aws_secrets, refs, checker)
+    assert res[0].status is Status.ERROR
+
+
+def test_aws_keys_on_non_json_is_error():
+    aws_secrets = {"prod/gh": "ghp_plain_not_json"}
+    refs = [AwsSecretRef("us-east-1", "prod/gh", ["token"])]
+    checker = lambda t, u: TokenCheck(valid=True)
+    res = run_aws(aws_secrets, refs, checker)
+    assert res[0].status is Status.ERROR
+
+
+def test_aws_dockerconfig_in_plain_secret():
+    doc = json.dumps({"auths": {"ghcr.io": {"password": "ghp_reg"}}})
+    refs = [AwsSecretRef("us-east-1", "prod/pull", [])]
+    checker = lambda t, u: TokenCheck(valid=True, expires_at=NOW + timedelta(days=30))
+    res = run_aws({"prod/pull": doc}, refs, checker)
+    assert res[0].source == "ghcr.io"
+    assert res[0].status is Status.OK

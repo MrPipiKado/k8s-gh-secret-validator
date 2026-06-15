@@ -26,10 +26,24 @@ class Status(enum.Enum):
 
 @dataclass
 class SecretRef:
-    """A secret + the keys within it that hold tokens, from the config."""
+    """A Kubernetes secret + the keys within it that hold tokens."""
 
     namespace: str
     name: str
+    keys: List[str] = field(default_factory=list)
+
+
+@dataclass
+class AwsSecretRef:
+    """An AWS Secrets Manager secret + the JSON keys that hold tokens.
+
+    ``keys`` is optional: when empty, the entire ``SecretString`` is treated as a
+    single token (or a dockerconfigjson document). When provided, the secret is
+    parsed as a JSON object and each named key is validated.
+    """
+
+    region: str
+    secret_id: str
     keys: List[str] = field(default_factory=list)
 
 
@@ -47,9 +61,14 @@ class ExtractedToken:
 
 @dataclass
 class TokenResult:
-    """The validation result for one token, ready to be reported."""
+    """The validation result for one token, ready to be reported.
 
-    namespace: str
+    Provider-agnostic: ``provider`` is the backend (``k8s``/``aws``) and
+    ``location`` is the namespace (k8s) or region (aws).
+    """
+
+    provider: str
+    location: str
     name: str
     key: str
     source: str

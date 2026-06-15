@@ -19,6 +19,9 @@ extraArgs:
 serviceAccount:
   create: true
   name: ""               # defaults to the fullname when empty
+  # Annotations for the ServiceAccount. For AWS Secrets Manager via IRSA, set:
+  #   eks.amazonaws.com/role-arn: arn:aws:iam::<account>:role/<role>
+  annotations: {}
 
 rbac:
   create: true
@@ -52,6 +55,11 @@ config:
     - namespace: default
       name: ghcr-pull
       keys: [".dockerconfigjson"]
+  # AWS Secrets Manager sources (requires IRSA — see serviceAccount.annotations).
+  aws_secrets: []
+  #  - region: us-east-1
+  #    secret_id: prod/github-token
+  #    keys: [GITHUB_TOKEN]
   notifiers:
     teams:
       enabled: false

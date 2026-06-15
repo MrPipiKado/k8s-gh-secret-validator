@@ -7,7 +7,7 @@ from token_validator.report import TeamsReporter
 
 def _result(status):
     return TokenResult(
-        namespace="default", name="s", key="token", source="token",
+        provider="k8s", location="default", name="s", key="token", source="token",
         token_type="classic PAT", status=status,
         expires_at=datetime(2026, 6, 20, tzinfo=timezone.utc),
     )

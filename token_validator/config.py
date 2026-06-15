@@ -8,7 +8,7 @@ from typing import List
 
 import yaml
 
-from .models import SecretRef
+from .models import AwsSecretRef, SecretRef
 
 DEFAULT_GITHUB_API_URL = "https://api.github.com"
 DEFAULT_WARN_DAYS = 7
@@ -27,7 +27,8 @@ class TeamsConfig:
 
 @dataclass
 class Config:
-    secrets: List[SecretRef]
+    secrets: List[SecretRef] = field(default_factory=list)
+    aws_secrets: List[AwsSecretRef] = field(default_factory=list)
     warn_days: int = DEFAULT_WARN_DAYS
     github_api_url: str = DEFAULT_GITHUB_API_URL
     teams: TeamsConfig = field(default_factory=TeamsConfig)
@@ -50,12 +51,16 @@ def load_config(path: str) -> Config:
         raise ConfigError(f"config root must be a mapping, got {type(raw).__name__}")
 
     secrets = _parse_secrets(raw.get("secrets"))
+    aws_secrets = _parse_aws_secrets(raw.get("aws_secrets"))
+    if not secrets and not aws_secrets:
+        raise ConfigError("config must define at least one of 'secrets' or 'aws_secrets'")
     warn_days = _parse_warn_days(raw.get("warn_days", DEFAULT_WARN_DAYS))
     github_api_url = str(raw.get("github_api_url") or DEFAULT_GITHUB_API_URL).rstrip("/")
     teams = _parse_teams(raw.get("notifiers", {}))
 
     return Config(
         secrets=secrets,
+        aws_secrets=aws_secrets,
         warn_days=warn_days,
         github_api_url=github_api_url,
         teams=teams,
@@ -64,7 +69,7 @@ def load_config(path: str) -> Config:
 
 def _parse_secrets(raw_secrets) -> List[SecretRef]:
     if not raw_secrets:
-        raise ConfigError("config must define a non-empty 'secrets' list")
+        return []
     if not isinstance(raw_secrets, list):
         raise ConfigError("'secrets' must be a list")
 
@@ -81,6 +86,30 @@ def _parse_secrets(raw_secrets) -> List[SecretRef]:
             raise ConfigError(f"secrets[{i}] ({name}) must define a non-empty 'keys' list")
         refs.append(SecretRef(namespace=str(namespace), name=str(name),
                               keys=[str(k) for k in keys]))
+    return refs
+
+
+def _parse_aws_secrets(raw_aws) -> List[AwsSecretRef]:
+    if not raw_aws:
+        return []
+    if not isinstance(raw_aws, list):
+        raise ConfigError("'aws_secrets' must be a list")
+
+    refs: List[AwsSecretRef] = []
+    for i, item in enumerate(raw_aws):
+        if not isinstance(item, dict):
+            raise ConfigError(f"aws_secrets[{i}] must be a mapping")
+        secret_id = item.get("secret_id") or item.get("name")
+        if not secret_id:
+            raise ConfigError(f"aws_secrets[{i}] is missing 'secret_id'")
+        region = item.get("region")
+        if not region:
+            raise ConfigError(f"aws_secrets[{i}] ({secret_id}) is missing 'region'")
+        keys = item.get("keys") or []
+        if not isinstance(keys, list):
+            raise ConfigError(f"aws_secrets[{i}] ({secret_id}) 'keys' must be a list")
+        refs.append(AwsSecretRef(region=str(region), secret_id=str(secret_id),
+                                 keys=[str(k) for k in keys]))
     return refs
 
 

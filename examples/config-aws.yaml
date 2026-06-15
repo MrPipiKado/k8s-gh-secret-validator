@@ -1,0 +1,14 @@
+# Validator config targeting AWS Secrets Manager.
+# Auth uses the standard boto3 credential chain (env vars, shared config, or an
+# IAM role / IRSA in EKS).
+warn_days: 7
+github_api_url: https://api.github.com
+aws_secrets:
+  # JSON secret: validate the named key(s).
+  - region: us-east-1
+    secret_id: prod/github-token
+    keys: [GITHUB_TOKEN]
+  # Plain-string secret: the whole value is the token.
+  - region: us-east-1
+    secret_id: prod/github-plain
+    keys: []

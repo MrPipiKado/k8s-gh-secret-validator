@@ -4,8 +4,8 @@ warn_days: 7
 # Override only for GitHub Enterprise Server (default works for github.com).
 github_api_url: https://api.github.com
 
-# Secrets to inspect. Each entry names a secret and the keys within it that
-# hold GitHub tokens. A ".dockerconfigjson" key is parsed as a registry
+# Kubernetes secrets to inspect. Each entry names a secret and the keys within
+# it that hold GitHub tokens. A ".dockerconfigjson" key is parsed as a registry
 # credentials document and may yield one token per registry.
 secrets:
   - namespace: default
@@ -14,6 +14,17 @@ secrets:
   - namespace: default
     name: ghcr-pull
     keys: [".dockerconfigjson"]
+
+# AWS Secrets Manager secrets to inspect. Provide `keys` when the secret is a
+# JSON object (each key is validated); omit `keys` to treat the whole
+# SecretString as a single token (or a dockerconfigjson document).
+aws_secrets:
+  - region: us-east-1
+    secret_id: prod/github-token        # name or full ARN
+    keys: [GITHUB_TOKEN]
+  - region: us-east-1
+    secret_id: prod/github-plain        # whole value is the token
+    keys: []
 
 notifiers:
   teams:
